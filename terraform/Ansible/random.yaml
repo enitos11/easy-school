@@ -1,0 +1,36 @@
+- name: Deploy Application
+  hosts: "all"
+  become: true
+  vars:
+    app_repo: "https://github.com/enitos11/easy-school.git"
+    app_dir: "/var/www/easy-school"
+    app_port: 3000
+    docker_image_name: "enitos/easy-school"
+    docker_container_name: "enitos-container"
+
+  tasks:
+    - name: Clone the application repository
+      git:
+        repo: "https://github.com/enitos11/easy-school.git"
+        dest: "/var/www/easy-school"
+        version: enny
+        force: true
+
+    - name: Build Docker image for the application
+      command: "docker build -t {{ docker_image_name }}:latest {{ app_dir }}"
+
+    - name: Stop any running container with the same name
+      shell: "docker stop {{ docker_container_name }} || true"
+      ignore_errors: true
+
+    - name: Remove any existing container with the same name
+      shell: "docker rm {{ docker_container_name }} || true"
+      ignore_errors: true
+
+    - name: Run the application container
+      shell: "docker run -d --name {{ docker_container_name }} -p {{ app_port }}:80 {{ docker_image_name }}:latest"
+
+    - name: Ensure the container is running
+      shell: "docker ps | grep {{ docker_container_name }}"
+      register: docker_status
+      failed_when: docker_status.rc != 0
